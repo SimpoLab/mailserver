@@ -34,7 +34,7 @@ My server runs Arch Linux so I'll be referring to its conventions (file paths, s
 
 
 ## Postfix
-Postfix is both an MTA and an MDA. We'll set it up for sending and mail for the domain *domain.tld*. Of course, replace it with your own domain if/when following the guide.
+Postfix is both an MTA and an MDA. We'll set it up for sending and mail for the domain *domain.tld*. Of course, replace it with your own domain if/when following the guide. We'll also set up local users, i.e. each mail user is a system user. You can alternatively set up virtual users, i.e. mail users don't have a corresponding system user (though we'll not cover this method in this guide).
 
 ### Base configuration
 Postfix configuration is contained in the directory `/etc/postfix` and is mostly based on two files: `/etc/postfix/main.cf`, which contains configuration parameters; and `/etc/postfix/master.cf`, which contains the services (and their options) Postfix shall run.
@@ -68,7 +68,15 @@ alias_database = $alias_maps
 ```
 See `aliases(5)`, `postalias(1)`, `newaliases(1)`.
 
-When you create a new alias file make sure to build the database with the `postalias` command. Just run `newaliases` if you only need to update an existing alias database.
+When you create a new alias file make sure to build the database with the `postalias` command. Just run `newaliases` if you only need to update an existing alias database:
+```sh
+postalias /etc/postfix/aliases
+```
+
+Remember to alias the root user as it's not a good idea to receive mail as root:
+```
+root: <you>
+```
 
 As for sending mail from an alias, we'll see that after configuring SASL authentication in Dovecot.
 
@@ -76,7 +84,23 @@ Tip: you can use `a: b,c,d` to make `a` a mailing list for `b`, `c`, and `d`.
 
 
 ### TLS
-[WIP]
+Get a certificate for *domain.tld*. If you don't have one already, an easy way is using certbot, for example:
+```sh
+sudo certbot certonly --standalone --email youremail@example.com -d domain.tld
+```
+
+In main.cf:
+```pfmain
+# sending
+smtp_tls_security_level = may
+
+# receiving
+smtpd_tls_security_level = may
+smtpd_use_tls = yes
+smtpd_tls_cert_file = /etc/letsencrypt/live/domain.tld/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/domain.tld/privkey.pem
+smtpd_tls_protocols = !SSLv2, !SSLv3
+```
 
 
 
