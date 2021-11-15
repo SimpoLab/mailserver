@@ -63,6 +63,11 @@ mynetworks_style = host
 relayhost =
 ```
 
+Of course, enable/start Postfix service, e.g., if using systemd:
+```sh
+systemctl start postfix.service
+```
+
 
 ### MX DNS record
 It is now time to add an MX record to your DNS. An MX record tells a server which wants to send mail to *domain.tld* the IP of the server which will receive the mail. In more complex setups, you may specify more than one server via multiple MX records and different priorities, or specify just one and let your server relay the mail to various hosts. In our simple setup we'll add just one record and the server will keep the received mail.
@@ -127,6 +132,24 @@ smtps     inet  n       -       n       -       -       smtpd
   -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
   -o milter_macro_daemon_name=ORIGINATING
 ```
+
+
+
+
+## Verified mail
+If you think about it, we didn't set up any mechanism that certifies to the receiver that mail signed with our domain actually comes from a legitimate server. In fact, anyone could set up their MTA to send mail under *domain.tld*. In this section we set up a series of mechanisms to certify that mail sent from our server is legitimately under our domain.
+
+I suggest [this page](https://www.appmaildev.com/en/dkim) for testing the various protocols, however you could of course make the verifications yourself manually.
+
+
+### SPF record
+The first and simplest mechanism is a Sender Policy Framework (SPF) DNS record. An SPF record contains information about the IPs that can send mail under the name of the requested domain. When a server receives mail from *domain.tld*, it checks for SPF records with the DNS of *domain.tld* to see if the sender's IP is certified as legitimate by the domain administrators.
+
+SPF records are actually special TXT records with a particular syntax. You can specify legitimate servers via various methods, including explicit IP and web list. You can also specify the policy the receiver should adopt when receiving mail from specified senders. You can find all the information you need in the [official documentation](http://www.open-spf.org/SPF_Record_Syntax). For our simple use case, we'll add a TXT record for the host/name/subdomain `@` with the following value:
+```
+v=spf1 +ip4:XXX.XXX.XXX.XXX -all
+```
+which tells the receiver to accept mail from the specified IPv4 and reject mail from any other host.
 
 
 
