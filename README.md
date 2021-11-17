@@ -1,4 +1,4 @@
-# A "simple", yet complete mail server setup
+# Mailserver
 Setting up a proper mailserver is anything but simple, especially if you want to be considered reputable by other servers. In this guide I explain what I did for setting up and configuring my mailserver with Postfix and Dovecot. I'll assume you want to run everything on the same machine and you already own a domain.
 
 
@@ -24,7 +24,7 @@ For a complete mail server setup you'll need a Mail Transfer Agent (MTA), which 
 ### Needed software
 Find and install from the package distribution of your server the appropriate packages which contain the following software:
 - Postfix
-- Certbot
+- Certbot (optional)
 - OpenDKIM
 - OpenDMARC
 - Dovecot
@@ -162,7 +162,7 @@ A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a d
 DomainKeys Identified Mail (DKIM) is a method for authentication of hosts that can send mail under a certain domain. Basically, a service in the sender host digitally signs the outgoing message with a private key, then the receiver decrypts the signature by using the public key specified on the DKIM DNS record of the sending domain. We then need to set up a DKIM DNS record for our domain and a DKIM service on our sending host.
 
 #### DKIM service
-The DKIM service we'll set up on our host is an OpenDKIM service. We'll need a couple of tweaks in the configuration file `/etc/opendkim/opendkim.conf` (you may copy the template from `/usr/share/doc/opendkim/opendkim.conf.sample`) (see `opendkim(8)`):
+The DKIM service we'll set up on our host is an OpenDKIM service. We'll need a couple of tweaks in the configuration file `/etc/opendkim/opendkim.conf` (you may copy the template from `/usr/share/doc/opendkim/opendkim.conf.sample`) (see `opendkim(8)` and `opendkim.conf(5)`):
 ```conf
 Canonicalization	relaxed/simple
 Domain			domain.tld
@@ -221,6 +221,7 @@ We'll set up an OpenDMARC service with a similar yet simpler procedure to the on
 ```conf
 Socket unix:/run/opendmarc/opendmarc.sock
 ```
+See `opendmarc(8)` and `opendmarc.conf(5)`.
 
 As for OpenDKIM, OpenDMARC does not create the socket directory, so we need to create `/run/opendmarc` manually:
 ```
@@ -230,6 +231,11 @@ sudo chown opendmarc:postfix /run/opendmarc
 And at boot by adding the file `/lib/tmpfiles.d/opendmarc.conf` with:
 ```
  D /run/opendmarc 0750 opendmarc postfix
+```
+
+Tell Postfix to use DMARC by updating its `main.cf`:
+```pfmain
+smtpd_milters = unix:/run/opendkim/opendkim.sock, unix:/run/opendmarc/opendmarc.sock
 ```
 
 The systemd service unit included in my repositories run OpenDMARC as `opendmarc:mail`, but we want it to run as group `postfix`. Let's fix that by adding a drop-in ovverride file `/etc/systemd/system/opendmarc.service.d/override.conf`:
@@ -254,10 +260,10 @@ Enable/start the OpenDMARC service and that's it.
 ## Sources
 - experience and trial-and-error
 - manual pages
-- Some [Arch Wiki](https://wiki.archlinux.org) pages, including [Mail server](https://wiki.archlinux.org/title/Mail_server), [Postfix](https://wiki.archlinux.org/title/Postfix)
-- [Postfix docs](http://www.postfix.org/documentation.html)
+- Some [Arch Wiki](https://wiki.archlinux.org) pages, including [Mail server](https://wiki.archlinux.org/title/Mail_server), [Postfix](https://wiki.archlinux.org/title/Postfix), [OpenDKIM](https://wiki.archlinux.org/title/OpenDKIM), [OpenDMARC](https://wiki.archlinux.org/title/OpenDMARC), [Dovecot](https://wiki.archlinux.org/title/Dovecot).
+- [Postfix docs](http://www.postfix.org/documentation.html) (especially [SASL with Dovecot](http://www.postfix.org/SASL_README.html#server_dovecot))
 - [Dovecot docs](https://www.dovecot.org/documentation)
-- Some Wikipedia pages, including [MX](https://en.wikipedia.org/wiki/MX_record), [SPF](https://en.wikipedia.org/wiki/Sender_Policy_Framework), [DKIM](https://en.wikipedia.org/wiki/DomainKeys_Identified_Mail), [DMARC](https://en.wikipedia.org/wiki/DMARC)
+- Some Wikipedia pages, including [MX](https://en.wikipedia.org/wiki/MX_record), [SPF](https://en.wikipedia.org/wiki/Sender_Policy_Framework), [DKIM](https://en.wikipedia.org/wiki/DomainKeys_Identified_Mail), [DMARC](https://en.wikipedia.org/wiki/DMARC), [SASL](https://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer)
 
 I highly recommend checking out the various Wikipedia pages regarding mail servers and protocols as they are a big source for learning.
 
@@ -265,7 +271,7 @@ I highly recommend checking out the various Wikipedia pages regarding mail serve
 
 
 ## Other links
-- https://www.appmaildev.com/en/dkim
+- [Authentication tester](https://www.appmaildev.com/en/dkim.md)
 
 
 
