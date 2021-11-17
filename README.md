@@ -257,6 +257,64 @@ Enable/start the OpenDMARC service and that's it.
 
 
 
+
+## Dovecot
+Dovecot is an IMAP and POP3 server: it allows email clients (MUAs) to access mail remotely. Start by copying the standard configuration:
+```
+cp /usr/share/doc/dovecot/example-config/dovecot.conf /etc/dovecot/
+cp -r /usr/share/doc/dovecot/example-config/conf.d /etc/dovecot/
+```
+In `/etc/dovecot/conf.d/10-mail.conf` set:
+```conf
+# using mbox format instead of Maildir
+mail_location = mbox:~/mail:INBOX=/var/spool/mail/%u
+```
+
+
+### SASL
+We'll now set up Simple Authentication and Security Layer (SASL) between Postfix and Dovecot. Firstly, in `/etc/dovecot/conf.d/10-master.conf` set:
+```conf
+service auth {
+	# communication with Postfix via UNIX socket
+	unix_listener /var/spool/postfix/private/auth {
+		group = postfix
+		mode = 0660
+		user = postfix
+	}
+}
+```
+then set in Postfix's `main.cf`:
+```pfmain
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous, noplaintext
+```
+
+
+### TLS for SASL
+Since we use the same domain for SMTP and IMAP/POP3, we can use the same certificate as before. In `/etc/dovecot/conf.d/10-ssl.conf` put:
+```conf
+ssl = required
+ssl_cert = </etc/letsencrypt/live/domain.tld/fullchain.pem
+ssl_key = </etc/letsencrypt/live/domain.tld/privkey.pem
+```
+In `/etc/dovecot/conf.d/
+```conf
+# safe since we enforce TLS
+disable_plaintext_auth = no
+```
+And in `/etc/postfix/main.cf`:
+```pfmain
+smtpd_sasl_tls_security_options = noanonymous
+smtpd_tls_auth_only = yes
+```
+
+Of course, enable/start Dovecot when done configuring.
+
+
+
+
 ## Sources
 - experience and trial-and-error
 - manual pages
