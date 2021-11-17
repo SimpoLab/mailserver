@@ -213,6 +213,43 @@ with the host/name/subdomain `default._domainkey`.
 Enable/start the OpenDKIM service and that's it.
 
 
+### DMARC
+Domain-based Message Authentication, Reporting and Conformance (DMARC) is another mail authentication protocol based on SPF and DKIM that specifies a policy to take when receiving mail from a sender under a particular domain name, including reporting to the [postmaster](https://en.wikipedia.org/wiki/Postmaster_(computing\)).
+
+#### DMARC service
+We'll set up an OpenDMARC service with a similar yet simpler procedure to the one we used for OpenDKIM. In `/etc/opendmarc/opendmarc.conf` set:
+```conf
+Socket unix:/run/opendmarc/opendmarc.sock
+```
+
+As for OpenDKIM, OpenDMARC does not create the socket directory, so we need to create `/run/opendmarc` manually:
+```
+sudo mkdir /run/opendmarc
+sudo chown opendmarc:postfix /run/opendmarc
+```
+And at boot by adding the file `/lib/tmpfiles.d/opendmarc.conf` with:
+```
+ D /run/opendmarc 0750 opendmarc postfix
+```
+
+The systemd service unit included in my repositories run OpenDMARC as `opendmarc:mail`, but we want it to run as group `postfix`. Let's fix that by adding a drop-in ovverride file `/etc/systemd/system/opendmarc.service.d/override.conf`:
+```systemd
+[Service]
+Group=
+Group=postfix
+ ```
+
+#### DMARC record
+DMARC records are TXT records, similarly to SPF and DKIM. The DMARC record in particular contains information on the addresses to report malicious mail practices ([spoofing](https://en.wikipedia.org/wiki/Email_spoofing)) to. See the [official documentation](https://dmarc.org/overview) for the detailed syntax. Our DMARC record will look like this:
+```
+v=DMARC1; rua=mailto:postmaster@domain.tld; ruf=mailto:reports@domain.tld; adkim=s; fo=1
+```
+for the host/name/subdomain `_dmarc`.
+You may choose the `ruf` (reporting URI for forensic reports) and `rua` (reporting URI for aggregate reports) addresses you prefer, but keep in mind the conventions and make sure it is accessible on your server (system/virtual user or alias).
+
+Enable/start the OpenDMARC service and that's it.
+
+
 
 ## Sources
 - experience and trial-and-error
