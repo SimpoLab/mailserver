@@ -151,6 +151,8 @@ v=spf1 +ip4:XXX.XXX.XXX.XXX -all
 ```
 which tells the receiver to accept mail from the specified IPv4 and reject mail from any other host.
 
+For more information on how to add TXT records, look for a guide by your DNS provider.
+
 
 ### PTR record (optional)
 A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a domain name. PTR records are usually assigned by requesting it to your ISP or to your server provider.
@@ -160,7 +162,7 @@ A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a d
 DomainKeys Identified Mail (DKIM) is a method for authentication of hosts that can send mail under a certain domain. Basically, a service in the sender host digitally signs the outgoing message with a private key, then the receiver decrypts the signature by using the public key specified on the DKIM DNS record of the sending domain. We then need to set up a DKIM DNS record for our domain and a DKIM service on our sending host.
 
 #### DKIM service
-The DKIM service we'll set up on our host is an OpenDKIM service. We'll need a couple of tweaks in the configuration file `/etc/opendkim/opendkim.conf` (see `opendkim(8)`):
+The DKIM service we'll set up on our host is an OpenDKIM service. We'll need a couple of tweaks in the configuration file `/etc/opendkim/opendkim.conf` (you may copy the template from `/usr/share/doc/opendkim/opendkim.conf.sample`) (see `opendkim(8)`):
 ```conf
 Canonicalization	relaxed/simple
 Domain			domain.tld
@@ -170,15 +172,20 @@ Socket                  local:/run/opendkim/opendkim.sock
 UMask			002
 UserID			opendkim:postfix
 ```
-This setup assumes the presence of a private key in `/etc/opendkim/default.private` and builds a UNIX socket for communication with Postfix (you may use a network socket if OpenDKIM and Postfix services reside on different machines, but UNIX sockets are more performant and safer if on the same host). We then need to configure Postfix accordingly by adding, in `main.cf`:
+This setup assumes the presence of a private key in `/etc/opendkim/default.private` and builds a UNIX socket for communication with Postfix (you may use a network socket if OpenDKIM and Postfix services reside on different machines, but UNIX sockets are more performant and more secure if on the same host). We then need to configure Postfix accordingly by adding, in `main.cf`:
 ```pfmain
 smtpd_milters = unix:/run/opendkim/opendkim.sock
 non_smtpd_milters = $smtpd_milters
 ```
 
-We set up OpenDKIM to create a socket in `/run/opendkim/opendkim.sock`, but OpenDKIM does not create directories, so we need to create `/run/opendkim` manually. You can do it automatically at boot by adding a file `/lib/tmpfiles.d/opendkim.conf` with the following content:
+We set up OpenDKIM to create a socket in `/run/opendkim/opendkim.sock`, but OpenDKIM does not create directories, so we need to create `/run/opendkim` manually:
 ```
-d /etc/opendkim 0700 opendkim mail - -
+sudo mkdir /run/opendkim
+sudo chown opendkim:postfix /run/opendkim
+```
+You can do this automatically at boot by adding a file `/lib/tmpfiles.d/opendkim.conf` with the following content:
+```
+ D /run/opendkim 0750 opendkim postfix
 ```
 
 Use the following command to generate the key pair:
