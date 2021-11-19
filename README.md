@@ -4,6 +4,35 @@ Setting up a proper mailserver is anything but simple, especially if you want to
 
 
 
+## Table of Contents
+- [Introduction](#Introduction)
+	- [Steps](#Steps)
+	- [Needed software](#Needed-software)
+- [Postfix](#Postfix)
+	- [Base configuration](#Base-configuration)
+	- [MX DNS record](#MX-DNS-record)
+	- [Aliases](#Aliases)
+- [Secure mail](#Secure-mail)
+- [Verified mail](#Verified-mail)
+	- [SPF record](#SPF-record)
+	- [PTR record](#PTR-record)
+	- [DKIM](#DKIM)
+		- [DKIM service](#DKIM-service)
+		- [DKIM record](#DKIM-record)
+	- [DMARC](#DMARC)
+		- [DMARC service](#DMARC-service)
+		- [DMARC record](#DMARC-record)
+- [Dovecot](#Dovecot)
+	- [SASL](#SASL)
+	- [TLS for SASL](#TLS-for-SASL)
+	- [Sender restrictions](#Sender-restrictions)
+- [Sources](#Sources)
+- [Other links](#Other-links)
+- [Contribution](#Contribution)
+
+
+
+
 ## Introduction
 As a disclaimer, I am not an expert on the matter by any means. I'm just reporting as a guide what I have done on my server and what I found to work.
 
@@ -77,7 +106,7 @@ Find out how to add an MX record with your DNS provider. For our usage the recor
 As the addition of the record takes effect your server should effectively send and receive (unsecure and unverified) mail.
 
 
-### Aliases (optional)
+### Aliases
 An alias `a: b` lets `b` receive mail sent to `a@domain.tld`. While on systems like Debian the alias file is usually located in `/etc/aliases`, Arch Linux prefers to create a Postfix-specific alias file in `/etc/postfix/aliases`. Of course, tweak it as you like by changing `/etc/postfix/main.cf` accordingly:
 ```pfmain
 alias_maps = hash:/etc/postfix/aliases
@@ -154,8 +183,8 @@ which tells the receiver to accept mail from the specified IPv4 and reject mail 
 For more information on how to add TXT records, look for a guide by your DNS provider.
 
 
-### PTR record (optional)
-A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a domain name. PTR records are usually assigned by requesting it to your ISP or to your server provider.
+### PTR record
+A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a domain name. PTR records are usually assigned by requesting it to your ISP or to your server provider. This step is considered optional.
 
 
 ### DKIM
