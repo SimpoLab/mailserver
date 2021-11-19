@@ -312,6 +312,33 @@ smtpd_tls_auth_only = yes
 
 Of course, enable/start Dovecot when done configuring.
 
+Users may now access the IMAP/SMTP server with the following settings on their MUA:
+- user/pw: system ones
+- SMTP (outgoing): port 465, security SSL/TLS, server domain.tld
+- IMAP (incoming): port 993, security SSL/TLS, server domain.tld
+
+
+
+### Sender restrictions
+Right now, every authenticated user can send mail from any address via our SMTP server (FROM field of SMTP). We want to limit the range of addresses they can send mail from to `username@domain.tld` and maybe some aliases. We can do this by specifying, in `/etc/postfix/main.cf`:
+```pfmain
+smtpd_sender_restrictions = reject_non_fqdn_sender, reject_unknown_sender_domain, reject_sender_login_mismatch
+smtpd_sender_login_maps = pcre:/etc/postfix/sendas.pcre
+```
+We use PCRE for regex-based alias definitions. Keep in mind that you may need to install an appropriate package (possibly `postfix-pcre`).
+
+The first two options of the first line limit FROM addresses to valid domains and to domains recognised by our Postfix configuration (`$myorigin`). The third option, together with the second line, tells Postfix to accept an address only if matches the rules provided by the `sendas.pcre` file. The file maps candidate FROM addresses to their owner(s) (similarly to an alias file):
+```pcre
+# Users can only send mail from their own user or from their aliases
+
+/^postmaster@domain\.tld/     <you>
+/^admin@domain\.tld/          <you>, <another-admin>
+
+# match any other address with the user defined by the part before the @
+/^(.*)@domain\.tld/ ${1}
+```
+You don't need to launch `postalias` or `newaliases` for PCRE files.
+
 
 
 
