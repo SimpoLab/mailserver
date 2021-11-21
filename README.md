@@ -28,6 +28,7 @@ Setting up a proper mailserver is anything but simple, especially if you want to
 	- [Sender restrictions](#Sender-restrictions)
 - [Sources](#Sources)
 - [Other links](#Other-links)
+- [License](#License)
 - [Contribution](#Contribution)
 
 
@@ -386,6 +387,12 @@ I highly recommend checking out the various Wikipedia pages regarding mail serve
 
 ## Other links
 - [Authentication tester](https://www.appmaildev.com/en/dkim.md)
+
+
+
+
+## License
+This work is licensed under a [CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)
 
 
 
