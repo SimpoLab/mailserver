@@ -26,10 +26,7 @@ Setting up a proper mailserver is anything but simple, especially if you want to
 	- [SASL](#SASL)
 	- [TLS for SASL](#TLS-for-SASL)
 	- [Sender restrictions](#Sender-restrictions)
-- [Sources](#Sources)
-- [Other links](#Other-links)
-- [License](#License)
-- [Contribution](#Contribution)
+- [Incoming SPF](#Incoming-SPF)
 
 
 
@@ -372,6 +369,26 @@ You don't need to launch `postalias` or `newaliases` for PCRE files.
 
 
 
+## Incoming SPF
+An optional upgrade to your server is filter received mail to only accept from IPs verified with SPF. You can do that with a couple of tools, including `python-postfix-policyd-spf`. After installing (you can find it on the AUR), we need to configure Postfix accordingly. In `main.cf`:
+```pfmain
+policy-spf_time_limit = 3600s
+smtpd_recipient_restrictions=
+     permit_sasl_authenticated
+     permit_mynetworks
+     reject_unauth_destination
+     check_policy_service unix:private/policy-spf
+```
+In `master.cf`:
+```pfmaster
+policy-spf  unix  -       n       n       -       0       spawn
+  user=nobody argv=/usr/bin/policyd-spf
+```
+You can also configure the policy in `/etc/python-policyd-spf/policyd-spf.conf` (see the `.commented` version for reference), although defaults are sane. Remember to reload the Postfix service and you're done.
+
+
+
+
 ## Sources
 - experience and trial-and-error
 - manual pages
@@ -387,6 +404,7 @@ I highly recommend checking out the various Wikipedia pages regarding mail serve
 
 ## Other links
 - [Authentication tester](https://www.appmaildev.com/en/dkim.md)
+- [SMTP reference](https://www.samlogic.net/articles/smtp-commands-reference.htm)
 
 
 
