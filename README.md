@@ -129,8 +129,8 @@ Tip: you can use `a: b,c,d` to make `a` a mailing list for `b`, `c`, and `d`.
 
 
 
-## Secure mail (TLS)
-Get a certificate for *domain.tld*. If you don't have one already, an easy way is using `certbot`, for example:
+## Secure mail
+Get a TLS certificate for *domain.tld*. If you don't have one already, an easy way is using `certbot`, for example:
 ```sh
 sudo certbot certonly --standalone --email youremail@example.com -d domain.tld
 ```
