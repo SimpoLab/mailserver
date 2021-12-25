@@ -160,6 +160,11 @@ smtps     inet  n       -       n       -       -       smtpd
   -o milter_macro_daemon_name=ORIGINATING
 ```
 
+You might also need to add the well known ports of SMTPS to `/etc/services` if not present:
+```services
+smtps		465/tcp
+smtps		465/udp
+```
 
 
 
