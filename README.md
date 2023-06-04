@@ -331,7 +331,7 @@ ssl = required
 ssl_cert = </etc/letsencrypt/live/domain.tld/fullchain.pem
 ssl_key = </etc/letsencrypt/live/domain.tld/privkey.pem
 ```
-In `/etc/dovecot/conf.d/
+In `/etc/dovecot/conf.d/10-auth.conf`:
 ```conf
 # safe since we enforce TLS
 disable_plaintext_auth = no
