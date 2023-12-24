@@ -2,40 +2,10 @@
 Setting up a proper mailserver is anything but simple, especially if you want to be considered reputable by other servers. In this guide I explain what I did for setting up and configuring my mailserver with Postfix and Dovecot. I'll assume you want to run everything on the same machine and you already own a domain.
 
 
-
-
-## Table of Contents
-- [Introduction](#Introduction)
-	- [Steps](#Steps)
-	- [Needed software](#Needed-software)
-- [Postfix](#Postfix)
-	- [Base configuration](#Base-configuration)
-	- [MX DNS record](#MX-DNS-record)
-	- [Aliases](#Aliases)
-- [Secure mail](#Secure-mail)
-- [Verified mail](#Verified-mail)
-	- [SPF record](#SPF-record)
-	- [PTR record](#PTR-record)
-	- [DKIM](#DKIM)
-		- [DKIM service](#DKIM-service)
-		- [DKIM record](#DKIM-record)
-	- [DMARC](#DMARC)
-		- [DMARC service](#DMARC-service)
-		- [DMARC record](#DMARC-record)
-- [Dovecot](#Dovecot)
-	- [SASL](#SASL)
-	- [TLS for SASL](#TLS-for-SASL)
-	- [Sender restrictions](#Sender-restrictions)
-- [Incoming SPF](#Incoming-SPF)
-
-
-
-
 ## Introduction
 As a disclaimer, I am not an expert on the matter by any means. I'm just reporting as a guide what I have done on my server and what I found to work.
 
 For a complete mail server setup you'll need a Mail Transfer Agent (MTA), which sends and receives mail via the SMTP protocol; a Mail Delivery Agent (MDA), which stores mail in mailbox formats such as mbox or Maildir; an IMAP/POP3 server, which lets users access their mail remotely from a Mail User Agent (MUA, clients such as Thunderbird). For server reputability you'll need to add some DNS records and relative services on the server: SPF, DKIM, DMARC, PTR (reverse DNS). Last but not least is of course TLS/SSL for secure mail.
-
 
 ### Steps
 - install and configure Postfix
@@ -46,7 +16,6 @@ For a complete mail server setup you'll need a Mail Transfer Agent (MTA), which 
 - install and configure DMARC (opendmarc) and relative DNS record
 - install and configure Dovecot (IMAP): Maildir/mbox, TLS, SASL socket for Postfix
 - configure sender security on Postfix (FROM address) and aliases
-
 
 ### Needed software
 Find and install from the package distribution of your server the appropriate packages which contain the following software:
@@ -59,13 +28,10 @@ Find and install from the package distribution of your server the appropriate pa
 My server runs Arch Linux so I'll be referring to its conventions (file paths, services, etc.). However, as usual, you can easily adapt the guide to any Linux distro. Any configuration not mentioned is left as default.
 
 
-
-
 ## Postfix
 Postfix is both an MTA and an MDA. Out of the box Postfix should already be able to send and receive mail locally (between system users). You can test this via the `sendmail` command or by using an implementation of the mailx POSIX standard, e.g. `s-nail` (`mail` command).
 
 Anyway, we'll set up Postfix for sending and receiving mail internally *or* externally for the domain *domain.tld*. Of course, replace it with your own domain if/when following the guide. We'll also set up local users, i.e. each mail user is a system user. You can alternatively set up virtual users, i.e. mail users don't have a corresponding system user (though we'll not cover this method in this guide).
-
 
 ### Base configuration
 Postfix configuration is contained in the directory `/etc/postfix` and is mostly based on two files: `/etc/postfix/main.cf`, which contains configuration parameters; and `/etc/postfix/master.cf`, which contains the services (and their options) Postfix will run. See `postconf(5)` and `master(5)`.
@@ -95,14 +61,12 @@ Of course, enable/start Postfix service, e.g., if using systemd:
 systemctl start postfix.service
 ```
 
-
 ### MX DNS record
 It is now time to add an MX record to your DNS. An MX record tells a server which wants to send mail to *domain.tld* the IP of the server which will receive the mail. In more complex setups, you may specify more than one server via multiple MX records and different priorities, or specify just one and let your server relay the mail to various hosts. In our simple setup we'll add just one record and the server will keep the received mail.
 
 Find out how to add an MX record with your DNS provider. For our usage the record should have `@` as host/name/subdomain (i.e. `domain.tld` and not `something.domain.tld`), priority 1 (although it is not really relevant since there's only one MX record) and of course the IP of your server as value. Don't worry if you already have a record for `@`, say of type A, this does not conflict as it is queried only when sending mail.
 
 As the addition of the record takes effect your server should effectively send and receive (unsecure and unverified) mail.
-
 
 ### Aliases
 An alias `a: b` lets `b` receive mail sent to `a@domain.tld`. While on systems like Debian the alias file is usually located in `/etc/aliases`, Arch Linux prefers to create a Postfix-specific alias file in `/etc/postfix/aliases`. Of course, tweak it as you like by changing `/etc/postfix/main.cf` accordingly:
@@ -125,8 +89,6 @@ root: <you>
 As for sending mail from an alias, we'll see that after configuring SASL authentication in Dovecot.
 
 Tip: you can use `a: b,c,d` to make `a` a mailing list for `b`, `c`, and `d`.
-
-
 
 
 ## Secure mail
@@ -167,12 +129,10 @@ smtps		465/udp
 ```
 
 
-
 ## Verified mail
 If you think about it, we didn't set up any mechanism that certifies to the receiver that mail signed with our domain actually comes from a legitimate server. In fact, anyone could set up their MTA to send mail under *domain.tld*. In this section we set up a series of mechanisms to certify that mail sent from our server is legitimately under our domain.
 
 I suggest [this page](https://www.appmaildev.com/en/dkim) for testing the various protocols, however you could of course make the verifications yourself manually.
-
 
 ### SPF record
 The first and simplest mechanism is a Sender Policy Framework (SPF) DNS record. An SPF record contains information about the IPs that can send mail under the name of the requested domain. When a server receives mail from *domain.tld*, it checks for SPF records with the DNS of *domain.tld* to see if the sender's IP is certified as legitimate by the domain administrators.
@@ -185,10 +145,8 @@ which tells the receiver to accept mail from the specified IPv4 and reject mail 
 
 For more information on how to add TXT records, look for a guide by your DNS provider.
 
-
 ### PTR record
 A PTR record is a reverse DNS record, i.e. a record that given an IP assigns a domain name. PTR records are usually assigned by requesting it to your ISP or to your server provider. This step is considered optional.
-
 
 ### DKIM
 DomainKeys Identified Mail (DKIM) is a method for authentication of hosts that can send mail under a certain domain. Basically, a service in the sender host digitally signs the outgoing message with a private key, then the receiver decrypts the signature by using the public key specified on the DKIM DNS record of the sending domain. We then need to set up a DKIM DNS record for our domain and a DKIM service on our sending host.
@@ -244,7 +202,6 @@ with the host/name/subdomain `default._domainkey`.
 
 Enable/start the OpenDKIM service and that's it.
 
-
 ### DMARC
 Domain-based Message Authentication, Reporting and Conformance (DMARC) is another mail authentication protocol based on SPF and DKIM that specifies a policy to take when receiving mail from a sender under a particular domain name, including reporting to the [postmaster](https://en.wikipedia.org/wiki/Postmaster_(computing\)).
 
@@ -288,8 +245,6 @@ You may choose the `ruf` (reporting URI for forensic reports) and `rua` (reporti
 Enable/start the OpenDMARC service and that's it.
 
 
-
-
 ## Dovecot
 Dovecot is an IMAP and POP3 server: it allows email clients (MUAs) to access mail remotely. Start by copying the standard configuration:
 ```
@@ -301,7 +256,6 @@ In `/etc/dovecot/conf.d/10-mail.conf` set:
 # using mbox format instead of Maildir
 mail_location = mbox:~/mail:INBOX=/var/spool/mail/%u
 ```
-
 
 ### SASL
 We'll now set up Simple Authentication and Security Layer (SASL) between Postfix and Dovecot. Firstly, in `/etc/dovecot/conf.d/10-master.conf` set:
@@ -322,7 +276,6 @@ smtpd_sasl_path = private/auth
 smtpd_sasl_auth_enable = yes
 smtpd_sasl_security_options = noanonymous, noplaintext
 ```
-
 
 ### TLS for SASL
 Since we use the same domain for SMTP and IMAP/POP3, we can use the same certificate as before. In `/etc/dovecot/conf.d/10-ssl.conf` put:
@@ -349,8 +302,6 @@ Users may now access the IMAP/SMTP server with the following settings on their M
 - SMTP (outgoing): port 465, security SSL/TLS, server domain.tld
 - IMAP (incoming): port 993, security SSL/TLS, server domain.tld
 
-
-
 ### Sender restrictions
 Right now, every authenticated user can send mail from any address via our SMTP server (FROM field of SMTP). We want to limit the range of addresses they can send mail from to `username@domain.tld` and maybe some aliases. We can do this by specifying, in `/etc/postfix/main.cf`:
 ```pfmain
@@ -372,8 +323,6 @@ The first two options of the first line limit FROM addresses to valid domains an
 You don't need to launch `postalias` or `newaliases` for PCRE files.
 
 
-
-
 ## Incoming SPF
 An optional upgrade to your server is filter received mail to only accept from IPs verified with SPF. You can do that with a couple of tools, including `python-postfix-policyd-spf`. After installing (you can find it on the AUR), we need to configure Postfix accordingly. In `main.cf`:
 ```pfmain
@@ -392,8 +341,6 @@ policy-spf  unix  -       n       n       -       0       spawn
 You can also configure the policy in `/etc/python-policyd-spf/policyd-spf.conf` (see the `.commented` version for reference), although defaults are sane. Remember to reload the Postfix service and you're done.
 
 
-
-
 ## Sources
 - experience and trial-and-error
 - manual pages
@@ -405,19 +352,13 @@ You can also configure the policy in `/etc/python-policyd-spf/policyd-spf.conf` 
 I highly recommend checking out the various Wikipedia pages regarding mail servers and protocols as they are a big source for learning.
 
 
-
-
 ## Other links
 - [Authentication tester](https://www.appmaildev.com/en/dkim.md)
 - [SMTP reference](https://www.samlogic.net/articles/smtp-commands-reference.htm)
 
 
-
-
 ## License
 This work is licensed under a [CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)
-
-
 
 
 ## Contribution
